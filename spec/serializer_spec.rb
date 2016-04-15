@@ -381,7 +381,7 @@ describe JSONAPI::Serializer do
         'data' => serialize_primary(post, {serializer: MyApp::PostSerializer}),
       })
     end
-    it 'can include a top level errors node' do
+    it 'can include custom top level errors node' do
       errors = [
         {
           "source" => { "pointer" => "/data/attributes/first-name" },
@@ -396,6 +396,35 @@ describe JSONAPI::Serializer do
       ]
       expect(JSONAPI::Serializer.serialize_errors(errors)).to eq({ 'errors' => errors })
     end
+    it 'can include ActiveModel::Errors top level errors node' do
+      require 'active_record'
+
+      post_errors = ActiveModel::Errors.new(build(:post))
+      post_errors.add(:title, 'is too short')
+      post_errors.add(:title, 'cannot contain the word Post')
+      post_errors.add(:body, 'is too long')
+      post_errors.add(:base, 'This should go in as base error')
+      
+      expected_errors = [
+        {
+          "source": { "pointer": "/data/attributes/title" },
+          "detail":  "Title is too short"
+        },
+        {
+          "source": { "pointer": "/data/attributes/title" },
+          "detail": "Title cannot contain the word Post"
+        },
+        { 
+          "source": { "pointer": "/data/attributes/body" },
+          "detail": "Body is too long"
+        },
+        { 
+          "source": { "pointer": "" },
+          "detail": "This should go in as base error"
+        }
+      ]
+      expect(JSONAPI::Serializer.serialize_errors(post_errors)).to eq(expected_errors)
+    end  
     it 'can serialize a single object with an `each` method by passing skip_collection_check: true' do
       post = create(:post)
       post.define_singleton_method(:each) do

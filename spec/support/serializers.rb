@@ -1,3 +1,5 @@
+require 'active_record'
+
 module MyApp
   class Post
     attr_accessor :id
